@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NEWS2 · Clinical Assessment</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060910;--surface:#0d1117;--surface2:#161b22;--border:#21262d;
+    --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--accent-glow:rgba(88,166,255,0.2);
+    --green:#3fb950;--yellow:#d29922;--orange:#f0883e;--red:#f85149;
+    --radius:10px;--font-mono:'Space Mono',monospace;--font-display:'Bebas Neue',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-height:100vh;}
+  #app{max-width:480px;margin:0 auto;padding-bottom:100px;}
+
+  /* HEADER */
+  .app-header{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);padding:14px 16px 10px;display:flex;align-items:flex-end;justify-content:space-between;}
+  .app-header h1{font-family:var(--font-display);font-size:32px;letter-spacing:2px;line-height:1;}
+  .app-header h1 span{color:var(--accent);}
+  .header-sub{font-size:10px;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:2px;}
+  .score-pill .pill-label{font-size:9px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:2px;text-align:right;}
+  .score-pill .pill-value{font-family:var(--font-display);font-size:36px;line-height:1;color:var(--border);transition:color 0.3s;}
+  .score-pill .pill-value.has-score{color:var(--accent);}
+
+  /* OFFLINE */
+  #offline-bar{display:none;background:#1a0e00;border-bottom:1px solid var(--orange);padding:7px 16px;font-size:11px;color:var(--orange);align-items:center;gap:8px;}
+  #offline-bar.show{display:flex;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0;animation:blink 1.5s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+  /* QUEUE TAB */
+  #queue-tab{display:none;margin:12px 16px 0;background:var(--surface);border:1px solid var(--orange);border-radius:var(--radius);padding:12px 14px;cursor:pointer;}
+  #queue-tab.show{display:flex;align-items:center;gap:10px;}
+  .queue-title{font-size:12px;color:var(--orange);letter-spacing:0.08em;}
+  .queue-sub{font-size:10px;color:var(--muted);margin-top:1px;}
+  .queue-count{font-family:var(--font-display);font-size:28px;color:var(--orange);}
+
+  /* SECTIONS */
+  .section{padding:0 16px;}
+  .section-header{display:flex;align-items:center;gap:8px;padding:16px 0 8px;}
+  .section-header::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;}
+  .section-title{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);}
+
+  /* FIELDS */
+  .field{margin-bottom:10px;}
+  .field label{display:block;font-size:11px;color:var(--muted);letter-spacing:0.08em;margin-bottom:5px;text-transform:uppercase;}
+  .field label .req{color:var(--red);margin-left:2px;}
+  .field input,.field select{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px;color:var(--text);font-family:var(--font-mono);font-size:15px;-webkit-appearance:none;appearance:none;transition:border-color 0.2s,box-shadow 0.2s;}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+  .field input::placeholder{color:#30363d;}
+  .field input[readonly]{color:var(--muted);}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  /* PARAM TABLE */
+  .param-table{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .param-table-head{display:grid;grid-template-columns:1fr 100px 52px;padding:8px 12px;background:var(--surface2);font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
+  .param-row{display:grid;grid-template-columns:1fr 100px 52px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);}
+  .param-row:last-child{border-bottom:none;}
+  .param-name{font-size:13px;color:var(--text);line-height:1.2;}
+  .param-unit{font-size:10px;color:var(--muted);margin-top:1px;}
+  .param-input{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--font-mono);font-size:14px;width:100%;-webkit-appearance:none;transition:border-color 0.2s;}
+  .param-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow);}
+  .param-input::placeholder{color:#30363d;}
+  .param-select{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--font-mono);font-size:13px;width:100%;-webkit-appearance:none;appearance:none;}
+  .param-select:focus{outline:none;border-color:var(--accent);}
+  .score-badge{text-align:center;font-family:var(--font-display);font-size:22px;color:var(--border);transition:color 0.3s;padding-left:4px;}
+  .score-badge.s0{color:var(--green);}
+  .score-badge.s1{color:var(--yellow);}
+  .score-badge.s2{color:var(--orange);}
+  .score-badge.s3{color:var(--red);text-shadow:0 0 10px var(--red);}
+
+  /* RISK CARD */
+  .risk-card{margin:16px 16px 0;border:1px solid var(--border);border-radius:var(--radius);padding:16px;background:var(--surface);display:flex;align-items:center;justify-content:space-between;transition:border-color 0.4s,background 0.4s;}
+  .risk-card.risk-low{border-color:#3fb95066;background:#0d1f12;}
+  .risk-card.risk-lowmed{border-color:#d2992266;background:#1a1500;}
+  .risk-card.risk-med{border-color:#f0883e66;background:#1f1100;}
+  .risk-card.risk-high{border-color:#f8514966;background:#1f0808;}
+  .risk-score-big{font-family:var(--font-display);font-size:64px;line-height:1;color:var(--border);transition:color 0.4s,text-shadow 0.4s;}
+  .risk-low .risk-score-big{color:var(--green);text-shadow:0 0 20px #3fb95066;}
+  .risk-lowmed .risk-score-big{color:var(--yellow);text-shadow:0 0 20px #d2992266;}
+  .risk-med .risk-score-big{color:var(--orange);text-shadow:0 0 20px #f0883e66;}
+  .risk-high .risk-score-big{color:var(--red);text-shadow:0 0 30px #f8514999;}
+  .risk-info{text-align:right;}
+  .risk-label-text{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .risk-level-badge{display:inline-block;border:1px solid var(--border);border-radius:5px;padding:4px 10px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;transition:all 0.4s;}
+  .risk-low .risk-level-badge{border-color:var(--green);color:var(--green);}
+  .risk-lowmed .risk-level-badge{border-color:var(--yellow);color:var(--yellow);}
+  .risk-med .risk-level-badge{border-color:var(--orange);color:var(--orange);}
+  .risk-high .risk-level-badge{border-color:var(--red);color:var(--red);}
+
+  /* WEBHOOK */
+  .webhook-help{display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:8px;font-size:11px;color:var(--muted);line-height:1.7;}
+  .webhook-help.show{display:block;}
+  .webhook-help strong{color:var(--accent);}
+  .webhook-help pre{background:#010409;border:1px solid var(--border);border-radius:7px;padding:12px;overflow-x:auto;font-size:10px;color:#79c0ff;white-space:pre-wrap;margin:8px 0;line-height:1.5;}
+  .toggle-help{background:none;border:none;color:var(--accent);font-family:var(--font-mono);font-size:11px;cursor:pointer;text-decoration:underline;padding:0;margin-left:6px;}
+
+  /* ERROR */
+  .error-msg{margin:12px 16px;background:#2d0808;border:1px solid var(--red);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:#fca5a5;}
+
+  /* BOTTOM BAR */
+  .bottom-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;padding:12px 16px;background:linear-gradient(to top,var(--bg) 70%,transparent);max-width:480px;margin:0 auto;}
+  .submit-btn{width:100%;background:var(--accent);color:#000;border:none;border-radius:var(--radius);padding:16px;font-family:var(--font-display);font-size:18px;letter-spacing:2px;cursor:pointer;transition:opacity 0.2s,transform 0.1s;}
+  .submit-btn:active{transform:scale(0.98);opacity:0.9;}
+  .submit-btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+  /* SUCCESS SCREEN */
+  #success-screen{display:none;position:fixed;inset:0;z-index:200;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;}
+  #success-screen.show{display:flex;}
+  .success-icon{width:72px;height:72px;border-radius:50%;border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 30px #3fb95044;margin-bottom:20px;}
+  .success-title{font-family:var(--font-display);font-size:32px;letter-spacing:2px;margin-bottom:4px;}
+  .success-ts{font-size:11px;color:var(--muted);margin-bottom:6px;}
+  .success-queued-note{font-size:11px;color:var(--orange);margin-bottom:20px;}
+  .success-card{background:var(--surface);border-radius:14px;padding:24px 28px;width:100%;max-width:320px;margin-bottom:28px;border:1px solid var(--border);}
+  .success-row{margin-bottom:14px;}
+  .success-row:last-child{margin-bottom:0;}
+  .success-row-label{font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+  .success-row-value{font-size:15px;color:var(--text);}
+  .success-score{font-family:var(--font-display);font-size:72px;line-height:1;margin:8px 0 4px;}
+  .success-risk-badge{display:inline-block;border:1px solid currentColor;border-radius:5px;padding:4px 12px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;}
+  .new-btn{background:none;border:1px solid var(--border);border-radius:var(--radius);padding:14px 32px;color:var(--muted);font-family:var(--font-mono);font-size:13px;cursor:pointer;}
+  .new-btn:active{border-color:var(--accent);color:var(--accent);}
+
+  /* QUEUE PANEL */
+  #queue-panel{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.7);}
+  #queue-panel.show{display:block;}
+  .queue-sheet{position:absolute;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--surface);border-radius:16px 16px 0 0;border-top:1px solid var(--border);max-height:80vh;display:flex;flex-direction:column;}
+  .sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 0;flex-shrink:0;}
+  .sheet-header{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;flex-shrink:0;border-bottom:1px solid var(--border);}
+  .sheet-title{font-family:var(--font-display);font-size:20px;letter-spacing:1px;}
+  .sheet-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;line-height:1;}
+  .sheet-actions{padding:12px 16px;display:flex;gap:8px;flex-shrink:0;border-bottom:1px solid var(--border);}
+  .sync-btn{flex:1;background:var(--accent);color:#000;border:none;border-radius:8px;padding:11px;font-family:var(--font-display);font-size:15px;letter-spacing:1px;cursor:pointer;}
+  .sync-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .clear-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--muted);font-family:var(--font-mono);font-size:11px;cursor:pointer;}
+  .queue-list{overflow-y:auto;flex:1;padding:8px 0;}
+  .queue-item{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+  .queue-item:last-child{border-bottom:none;}
+  .qi-status{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .qi-status.pending{background:var(--orange);}
+  .qi-status.syncing{background:var(--accent);animation:blink 0.8s infinite;}
+  .qi-status.synced{background:var(--green);}
+  .qi-status.failed{background:var(--red);}
+  .qi-body{flex:1;min-width:0;}
+  .qi-name{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .qi-meta{font-size:10px;color:var(--muted);margin-top:2px;}
+  .qi-score{font-family:var(--font-display);font-size:22px;}
+  .qi-retry{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--muted);font-family:var(--font-mono);font-size:10px;cursor:pointer;white-space:nowrap;}
+  .queue-empty{padding:32px 16px;text-align:center;color:var(--muted);font-size:12px;}
+
+  #sync-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:400;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:8px 18px;font-size:12px;color:var(--text);white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+  #sync-toast.show{opacity:1;}
+
+  .pulse-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;margin-right:5px;vertical-align:middle;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+
+<div id="offline-bar">
+  <span class="dot"></span>
+  <span>No connection · Assessments will be queued and synced when back online</span>
+</div>
+
+<div id="app">
+  <header class="app-header">
+    <div>
+      <div class="header-sub"><span class="pulse-dot"></span>National Early Warning Score 2</div>
+      <h1>NEWS<span>2</span></h1>
+    </div>
+    <div class="score-pill">
+      <div class="pill-label">Total Score</div>
+      <div class="pill-value" id="header-score">—</div>
+    </div>
+  </header>
+
+  <div id="queue-tab" onclick="openQueuePanel()">
+    <span style="font-size:16px">📤</span>
+    <div style="flex:1">
+      <div class="queue-title">PENDING SYNC</div>
+      <div class="queue-sub" id="queue-sub-text">Tap to view and retry</div>
+    </div>
+    <div class="queue-count" id="queue-count-badge">0</div>
+    <span style="color:var(--muted);font-size:12px">›</span>
+  </div>
+
+  <!-- Patient Info -->
+  <div class="section">
+    <div class="section-header"><span class="section-title">Patient Information</span></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Full Name <span class="req">*</span></label>
+        <input type="text" id="fullName" placeholder="Last, First MI" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>PIN / ID <span class="req">*</span></label>
+        <input type="text" id="pin" placeholder="00123456" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label>Timestamp</label>
+      <input type="text" id="timestamp" readonly>
+    </div>
+  </div>
+
+  <!-- Clinical Parameters -->
+  <div class="section">
+    <div class="section-header"><span class="section-title">Clinical Parameters</span></div>
+    <div class="param-table">
+      <div class="param-table-head">
+        <span>Parameter</span><span>Value</span><span style="text-align:center">Score</span>
+      </div>
+      <div class="param-row">
+        <div><div class="param-name">Resp Rate</div><div class="param-unit">breaths/min</div></div>
+        <input class="param-input" type="number" id="respRate" placeholder="e.g. 18" inputmode="decimal" oninput="calcAll()">
+        <div class="score-badge" id="score-respRate">·</div>
+      </div>
+      <div class="param-row">
+        <div><div class="param-name">SpO₂ Scale 1</div><div class="param-unit">%</div></div>
+        <input class="param-input" type="number" id="spo2" placeholder="e.g. 97" inputmode="decimal" oninput="calcAll()">
+        <div class="score-badge" id="score-spo2">·</div>
+      </div>
+      <div class="param-row">
+        <div><div class="param-name">Systolic BP</div><div class="param-unit">mmHg</div></div>
+        <input class="param-input" type="number" id="systolicBP" placeholder="e.g. 120" inputmode="decimal" oninput="calcAll()">
+        <div class="score-badge" id="score-systolicBP">·</div>
+      </div>
+      <div class="param-row">
+        <div><div class="param-name">Pulse Rate</div><div class="param-unit">bpm</div></div>
+        <input class="param-input" type="number" id="pulse" placeholder="e.g. 72" inputmode="decimal" oninput="calcAll()">
+        <div class="score-badge" id="score-pulse">·</div>
+      </div>
+      <div class="param-row">
+        <div><div class="param-name">Temperature</div><div class="param-unit">°C</div></div>
+        <input class="param-input" type="number" id="temp" placeholder="e.g. 37.2" inputmode="decimal" step="0.1" oninput="calcAll()">
+        <div class="score-badge" id="score-temp">·</div>
+      </div>
+      <div class="param-row">
+        <div><div class="param-name">Consciousness</div><div class="param-unit">ACVPU</div></div>
+        <div style="position:relative">
+          <select class="param-select" id="consciousness" onchange="calcAll()">
+            <option value="">Select…</option>
+            <option value="A">Alert</option>
+            <option value="C">Confused</option>
+            <option value="V">Voice</option>
+            <option value="P">Pain</option>
+            <option value="U">Unresponsive</option>
+          </select>
+          <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:10px;pointer-events:none">▾</span>
+        </div>
+        <div class="score-badge" id="score-consciousness">·</div>
+      </div>
+      <div class="param-row">
+        <div><div class="param-name">Suppl. O₂</div><div class="param-unit">Delivery</div></div>
+        <div style="position:relative">
+          <select class="param-select" id="o2" onchange="calcAll()">
+            <option value="">Select…</option>
+            <option value="air">Room Air</option>
+            <option value="device">O₂ Device</option>
+          </select>
+          <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:10px;pointer-events:none">▾</span>
+        </div>
+        <div class="score-badge" id="score-o2">·</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Risk Card -->
+  <div class="risk-card" id="risk-card">
+    <div>
+      <div style="font-size:10px;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px">NEWS2 Score</div>
+      <div class="risk-score-big" id="risk-score">—</div>
+    </div>
+    <div class="risk-info">
+      <div class="risk-label-text">Clinical Risk</div>
+      <div class="risk-level-badge" id="risk-badge">Complete all fields</div>
+    </div>
+  </div>
+
+  <!-- Google Sheets Config -->
+  <div class="section">
+    <div class="section-header"><span class="section-title">Google Sheets</span></div>
+    <div class="field">
+      <label>Apps Script URL <button class="toggle-help" onclick="toggleHelp()">setup guide</button></label>
+      <input type="url" id="webhookUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" oninput="saveWebhook()">
+    </div>
+    <div class="webhook-help" id="webhook-help">
+      <strong>3-step setup:</strong><br><br>
+      1. Open your Google Sheet → <strong>Extensions → Apps Script</strong><br>
+      2. Replace all code with this, then Save:
+      <pre>function doPost(e) {
+  var sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getActiveSheet();
+  var d = JSON.parse(e.postData.contents);
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      "Timestamp","Full Name","PIN",
+      "RR","RR Score","SpO2","SpO2 Sc",
+      "SBP","SBP Sc","Pulse","Pulse Sc",
+      "Temp","Temp Sc","ACVPU","ACVPU Sc",
+      "O2 Supp","O2 Sc","NEWS2 Total","Risk Level"
+    ]);
+  }
+  sheet.appendRow([
+    d.timestamp, d.fullName, d.pin,
+    d.respRate, d.respScore,
+    d.spo2, d.spo2Score,
+    d.systolicBP, d.bpScore,
+    d.pulse, d.pulseScore,
+    d.temp, d.tempScore,
+    d.consciousness, d.consciousnessScore,
+    d.o2, d.o2Score,
+    d.news2Total, d.riskLevel
+  ]);
+  return ContentService.createTextOutput("OK");
+}</pre>
+      3. Click <strong>Deploy → New Deployment</strong><br>
+      → Type: <strong>Web App</strong><br>
+      → Execute as: <strong>Me</strong><br>
+      → Who has access: <strong>Anyone</strong><br>
+      → Copy the URL and paste above.
+    </div>
+  </div>
+
+  <div class="error-msg" id="error-msg" style="display:none"></div>
+  <div style="height:80px"></div>
+</div>
+
+<div class="bottom-bar">
+  <button class="submit-btn" id="submit-btn" onclick="handleSubmit()">SUBMIT ASSESSMENT</button>
+</div>
+
+<!-- Queue Panel -->
+<div id="queue-panel" onclick="closeQueuePanel(event)">
+  <div class="queue-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">OFFLINE QUEUE</div>
+      <button class="sheet-close" onclick="closeQueuePanel()">✕</button>
+    </div>
+    <div class="sheet-actions">
+      <button class="sync-btn" id="sync-all-btn" onclick="syncAll()">SYNC ALL NOW</button>
+      <button class="clear-btn" onclick="clearSynced()">Clear Synced</button>
+    </div>
+    <div class="queue-list" id="queue-list"></div>
+  </div>
+</div>
+
+<div id="sync-toast"></div>
+
+<!-- Success Screen -->
+<div id="success-screen">
+  <div class="success-icon">✓</div>
+  <div class="success-title">RECORDED</div>
+  <div class="success-ts" id="success-ts"></div>
+  <div class="success-queued-note" id="success-queued-note" style="display:none">📤 Queued — will sync when online</div>
+  <div class="success-card" id="success-card"></div>
+  <button class="new-btn" onclick="resetForm()">+ New Assessment</button>
+</div>
+
+<script>
+// ── NEWS2 SCORING ──
+const RANGES = {
+  respRate:   [{max:8,s:3},{max:11,s:1},{max:20,s:0},{max:24,s:2},{max:999,s:3}],
+  spo2:       [{max:91,s:3},{max:93,s:2},{max:95,s:1},{max:100,s:0}],
+  systolicBP: [{max:90,s:3},{max:100,s:2},{max:110,s:1},{max:219,s:0},{max:999,s:3}],
+  pulse:      [{max:40,s:3},{max:50,s:1},{max:90,s:0},{max:110,s:1},{max:130,s:2},{max:999,s:3}],
+  temp:       [{max:35.0,s:3},{max:36.0,s:1},{max:38.0,s:0},{max:39.0,s:1},{max:999,s:2}],
+};
+const RISK_LEVELS = [
+  {min:0,max:0,cls:'risk-low',label:'LOW'},
+  {min:1,max:4,cls:'risk-lowmed',label:'LOW · MEDIUM'},
+  {min:5,max:6,cls:'risk-med',label:'MEDIUM'},
+  {min:7,max:99,cls:'risk-high',label:'HIGH'},
+];
+const RISK_COLORS = {'risk-low':'var(--green)','risk-lowmed':'var(--yellow)','risk-med':'var(--orange)','risk-high':'var(--red)'};
+
+function scoreParam(key,val){
+  const v=parseFloat(val);
+  if(isNaN(v))return null;
+  for(const r of RANGES[key]){if(v<=r.max)return r.s;}
+  return null;
+}
+function scoreConsciousness(val){return val?val==='A'?0:3:null;}
+function scoreO2(val){return val?val==='air'?0:2:null;}
+function getRisk(score){if(score===null)return null;return RISK_LEVELS.find(r=>score>=r.min&&score<=r.max)||null;}
+
+// ── OFFLINE QUEUE ──
+const QUEUE_KEY='news2_queue';
+const WEBHOOK_KEY='news2_webhook';
+const DEFAULT_WEBHOOK='https://script.google.com/macros/s/AKfycbxfZzHMeG2D6pWIK3WWM10QrldE7hvv2MwECZMOmktmBFOn9sXVlG3Ub9XCR3gtIiAR/exec';
+
+function loadQueue(){try{return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');}catch{return[];}}
+function saveQueue(q){localStorage.setItem(QUEUE_KEY,JSON.stringify(q));}
+function addToQueue(payload){
+  const q=loadQueue();
+  q.push({id:Date.now()+'_'+Math.random().toString(36).slice(2,7),status:'pending',payload,addedAt:new Date().toISOString(),attempts:0});
+  saveQueue(q);updateQueueUI();
+}
+function updateItemStatus(id,status){
+  const q=loadQueue();
+  const item=q.find(i=>i.id===id);
+  if(item){item.status=status;if(status==='synced')item.syncedAt=new Date().toISOString();}
+  saveQueue(q);updateQueueUI();renderQueueList();
+}
+function updateQueueUI(){
+  const pending=loadQueue().filter(i=>i.status==='pending'||i.status==='failed');
+  const tab=document.getElementById('queue-tab');
+  document.getElementById('queue-count-badge').textContent=pending.length;
+  document.getElementById('queue-sub-text').textContent=pending.length===1?'1 assessment pending sync':`${pending.length} assessments pending sync`;
+  pending.length>0?tab.classList.add('show'):tab.classList.remove('show');
+}
+
+// ── CONNECTIVITY ──
+let isOnline=navigator.onLine;
+function setOnlineStatus(online){
+  isOnline=online;
+  const bar=document.getElementById('offline-bar');
+  online?bar.classList.remove('show'):bar.classList.add('show');
+  if(online)autoSync();
+}
+window.addEventListener('online',()=>setOnlineStatus(true));
+window.addEventListener('offline',()=>setOnlineStatus(false));
+setOnlineStatus(navigator.onLine);
+
+async function autoSync(){
+  const pending=loadQueue().filter(i=>i.status==='pending'||i.status==='failed');
+  if(!pending.length)return;
+  const webhook=document.getElementById('webhookUrl').value.trim()||localStorage.getItem(WEBHOOK_KEY)||DEFAULT_WEBHOOK;
+  showToast(`Syncing ${pending.length} queued assessment${pending.length>1?'s':''}…`);
+  for(const item of pending){await syncItem(item.id,webhook);await new Promise(r=>setTimeout(r,400));}
+  const rem=loadQueue().filter(i=>i.status==='pending'||i.status==='failed').length;
+  if(!rem)showToast('✓ All assessments synced');
+}
+
+async function syncItem(id,webhook){
+  const q=loadQueue();
+  const item=q.find(i=>i.id===id);
+  if(!item)return;
+  item.status='syncing';item.attempts=(item.attempts||0)+1;
+  saveQueue(q);renderQueueList();
+  try{
+    await fetch(webhook,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(item.payload)});
+    updateItemStatus(id,'synced');
+  }catch{updateItemStatus(id,'failed');}
+}
+
+async function syncAll(){
+  const webhook=document.getElementById('webhookUrl').value.trim()||localStorage.getItem(WEBHOOK_KEY)||DEFAULT_WEBHOOK;
+  if(!webhook){showToast('⚠ No Sheets URL configured');return;}
+  const btn=document.getElementById('sync-all-btn');
+  btn.disabled=true;btn.textContent='SYNCING…';
+  const pending=loadQueue().filter(i=>i.status==='pending'||i.status==='failed');
+  for(const item of pending){await syncItem(item.id,webhook);await new Promise(r=>setTimeout(r,300));}
+  btn.disabled=false;btn.textContent='SYNC ALL NOW';
+  const rem=loadQueue().filter(i=>i.status==='pending'||i.status==='failed').length;
+  showToast(rem===0?'✓ All synced':'⚠ Some items failed');
+}
+
+function clearSynced(){
+  saveQueue(loadQueue().filter(i=>i.status!=='synced'));
+  renderQueueList();updateQueueUI();
+}
+
+function openQueuePanel(){renderQueueList();document.getElementById('queue-panel').classList.add('show');document.body.style.overflow='hidden';}
+function closeQueuePanel(e){
+  if(!e||e.target===document.getElementById('queue-panel')){
+    document.getElementById('queue-panel').classList.remove('show');document.body.style.overflow='';
+  }
+}
+
+function renderQueueList(){
+  const q=loadQueue().slice().reverse();
+  const el=document.getElementById('queue-list');
+  if(!q.length){el.innerHTML='<div class="queue-empty">No queued assessments</div>';return;}
+  const riskColor={LOW:'var(--green)','LOW · MEDIUM':'var(--yellow)',MEDIUM:'var(--orange)',HIGH:'var(--red)'};
+  const webhook=document.getElementById('webhookUrl').value.trim()||localStorage.getItem(WEBHOOK_KEY)||DEFAULT_WEBHOOK;
+  el.innerHTML=q.map(item=>{
+    const p=item.payload;
+    const ts=new Date(item.addedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});
+    const color=riskColor[p.riskLevel]||'var(--muted)';
+    const retry=(item.status==='pending'||item.status==='failed')?`<button class="qi-retry" onclick="retryItem('${item.id}')">Retry</button>`:'';
+    const statusLabel={pending:'PENDING',syncing:'SYNCING…',synced:'SYNCED',failed:'FAILED'}[item.status]||item.status;
+    return `<div class="queue-item">
+      <span class="qi-status ${item.status}"></span>
+      <div class="qi-body">
+        <div class="qi-name">${p.fullName||'Unknown'} · ${p.pin||'—'}</div>
+        <div class="qi-meta">${ts} · ${statusLabel}</div>
+      </div>
+      <div class="qi-score" style="color:${color}">${p.news2Total}</div>
+      ${retry}
+    </div>`;
+  }).join('');
+}
+
+async function retryItem(id){
+  const webhook=document.getElementById('webhookUrl').value.trim()||localStorage.getItem(WEBHOOK_KEY)||DEFAULT_WEBHOOK;
+  await syncItem(id,webhook);showToast('Retry complete');
+}
+
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('sync-toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── TIMESTAMP ──
+function updateTimestamp(){
+  document.getElementById('timestamp').value=new Date().toLocaleDateString('en-GB')+'  '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(updateTimestamp,1000);updateTimestamp();
+
+// ── WEBHOOK ──
+function saveWebhook(){
+  const val=document.getElementById('webhookUrl').value.trim();
+  if(val)localStorage.setItem(WEBHOOK_KEY,val);
+}
+document.getElementById('webhookUrl').value=localStorage.getItem(WEBHOOK_KEY)||DEFAULT_WEBHOOK;
+
+// ── CALC ──
+let currentScores={},currentTotal=null;
+function calcAll(){
+  const s={};
+  for(const k of Object.keys(RANGES))s[k]=scoreParam(k,document.getElementById(k)?.value);
+  s.consciousness=scoreConsciousness(document.getElementById('consciousness').value);
+  s.o2=scoreO2(document.getElementById('o2').value);
+  for(const [k,score] of Object.entries(s)){
+    const el=document.getElementById('score-'+k);if(!el)continue;
+    el.className='score-badge'+(score!==null?' s'+score:'');
+    el.textContent=score!==null?score:'·';
+  }
+  const vals=Object.values(s);
+  const total=vals.some(v=>v===null)?null:vals.reduce((a,b)=>a+b,0);
+  currentScores=s;currentTotal=total;
+  const hdr=document.getElementById('header-score');
+  hdr.textContent=total!==null?total:'—';
+  hdr.className='pill-value'+(total!==null?' has-score':'');
+  const card=document.getElementById('risk-card');
+  document.getElementById('risk-score').textContent=total!==null?total:'—';
+  const badge=document.getElementById('risk-badge');
+  card.className='risk-card';
+  if(total!==null){
+    const r=getRisk(total);
+    if(r){card.classList.add(r.cls);badge.textContent=r.label;badge.style.color=RISK_COLORS[r.cls];badge.style.borderColor=RISK_COLORS[r.cls];}
+  } else {
+    badge.textContent='Complete all fields';badge.style.color='';badge.style.borderColor='';
+  }
+}
+
+function toggleHelp(){
+  const el=document.getElementById('webhook-help');
+  el.classList.toggle('show');
+  document.querySelector('.toggle-help').textContent=el.classList.contains('show')?'hide guide':'setup guide';
+}
+
+// ── SUBMIT ──
+async function handleSubmit(){
+  const name=document.getElementById('fullName').value.trim();
+  const pin=document.getElementById('pin').value.trim();
+  const webhook=document.getElementById('webhookUrl').value.trim()||DEFAULT_WEBHOOK;
+  const errEl=document.getElementById('error-msg');
+  const btn=document.getElementById('submit-btn');
+  errEl.style.display='none';
+  if(!name||!pin){showError('Patient name and PIN are required.');return;}
+  if(currentTotal===null){showError('Please complete all clinical parameters before submitting.');return;}
+  btn.disabled=true;btn.textContent='SAVING…';
+  const risk=getRisk(currentTotal);
+  const payload={
+    timestamp:new Date().toISOString(),fullName:name,pin,
+    respRate:document.getElementById('respRate').value,respScore:currentScores.respRate,
+    spo2:document.getElementById('spo2').value,spo2Score:currentScores.spo2,
+    systolicBP:document.getElementById('systolicBP').value,bpScore:currentScores.systolicBP,
+    pulse:document.getElementById('pulse').value,pulseScore:currentScores.pulse,
+    temp:document.getElementById('temp').value,tempScore:currentScores.temp,
+    consciousness:document.getElementById('consciousness').value,consciousnessScore:currentScores.consciousness,
+    o2:document.getElementById('o2').value,o2Score:currentScores.o2,
+    news2Total:currentTotal,riskLevel:risk?.label||'',
+  };
+  if(!isOnline){
+    addToQueue(payload);showSuccess(payload,risk,true);
+    btn.disabled=false;btn.textContent='SUBMIT ASSESSMENT';return;
+  }
+  try{
+    await fetch(webhook,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    showSuccess(payload,risk,false);
+  }catch{addToQueue(payload);showSuccess(payload,risk,true);}
+  btn.disabled=false;btn.textContent='SUBMIT ASSESSMENT';
+}
+
+function showError(msg){
+  const el=document.getElementById('error-msg');
+  el.textContent='⚠ '+msg;el.style.display='block';
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function showSuccess(payload,risk,queued){
+  const color=risk?RISK_COLORS[risk.cls]:'var(--green)';
+  document.getElementById('success-ts').textContent=new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  document.getElementById('success-queued-note').style.display=queued?'block':'none';
+  document.getElementById('success-card').innerHTML=`
+    <div class="success-row"><div class="success-row-label">Patient</div><div class="success-row-value">${payload.fullName}</div></div>
+    <div class="success-row"><div class="success-row-label">PIN</div><div class="success-row-value" style="color:var(--muted)">${payload.pin}</div></div>
+    <div class="success-row">
+      <div class="success-row-label">NEWS2 Score</div>
+      <div class="success-score" style="color:${color};text-shadow:0 0 30px ${color}66">${payload.news2Total}</div>
+      <div class="success-risk-badge" style="color:${color};border-color:${color}">${payload.riskLevel}</div>
+    </div>`;
+  document.getElementById('success-screen').classList.add('show');
+}
+
+function resetForm(){
+  document.getElementById('success-screen').classList.remove('show');
+  ['fullName','pin'].forEach(id=>document.getElementById(id).value='');
+  ['respRate','spo2','systolicBP','pulse','temp'].forEach(k=>{
+    document.getElementById(k).value='';
+    const b=document.getElementById('score-'+k);b.className='score-badge';b.textContent='·';
+  });
+  ['consciousness','o2'].forEach(k=>{
+    document.getElementById(k).value='';
+    const b=document.getElementById('score-'+k);b.className='score-badge';b.textContent='·';
+  });
+  document.getElementById('error-msg').style.display='none';
+  document.getElementById('submit-btn').disabled=false;
+  document.getElementById('submit-btn').textContent='SUBMIT ASSESSMENT';
+  currentTotal=null;
+  document.getElementById('header-score').textContent='—';
+  document.getElementById('header-score').className='pill-value';
+  document.getElementById('risk-score').textContent='—';
+  document.getElementById('risk-badge').textContent='Complete all fields';
+  document.getElementById('risk-badge').style.color='';
+  document.getElementById('risk-badge').style.borderColor='';
+  document.getElementById('risk-card').className='risk-card';
+}
+
+updateQueueUI();
+</script>
+</body>
+</html>
